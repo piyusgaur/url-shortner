@@ -1,16 +1,12 @@
 import "dotenv/config";
-import mongoose from "mongoose";
 import { app } from "./app.js";
+import { connectMongo } from "./config/mongo.js";
+import { getEnvNumber } from "./config/env.js";
 
-const port = Number(process.env.PORT ?? 4000);
-const mongoUri = process.env.MONGODB_URI;
+const port = getEnvNumber(process.env.PORT, 4000);
 
 async function start() {
-  if (!mongoUri) {
-    throw new Error("MONGODB_URI is required");
-  }
-
-  await mongoose.connect(mongoUri);
+  await connectMongo();
 
   app.listen(port, () => {
     console.log(`Backend listening on http://localhost:${port}`);
