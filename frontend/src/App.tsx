@@ -231,10 +231,10 @@ export default function App() {
               ) : null}
 
               <div className="action-row">
-                <button type="button" className="secondary-button" onClick={handleCopyShortUrl}>
+                <button type="button" className="action-button" onClick={handleCopyShortUrl}>
                   Copy link
                 </button>
-                <a className="secondary-button anchor-button" href={shortUrl} target="_blank" rel="noreferrer">
+                <a className="action-button action-anchor" href={shortUrl} target="_blank" rel="noreferrer">
                   Open link
                 </a>
               </div>
@@ -268,7 +268,7 @@ export default function App() {
                   {analyticsLoading ? "Loading..." : "View analytics"}
                 </button>
                 {shortCode ? (
-                  <button type="button" className="secondary-button" onClick={handleUseGeneratedCode}>
+                  <button type="button" className="action-button" onClick={handleUseGeneratedCode}>
                     Use last result
                   </button>
                 ) : null}
