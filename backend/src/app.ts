@@ -4,6 +4,7 @@ import { requestLogger } from "./middleware/requestLogger.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { shortenRouter } from "./routes/shorten.js";
+import { redirectRouter } from "./routes/redirect.js";
 
 export const app = express();
 
@@ -16,6 +17,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use(shortenRouter);
+app.use(redirectRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
