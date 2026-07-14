@@ -43,17 +43,20 @@ export default function App() {
   const [alias, setAlias] = useState("");
   const [shortUrl, setShortUrl] = useState("");
   const [shortCode, setShortCode] = useState("");
+  const [analyticsCode, setAnalyticsCode] = useState("");
   const [error, setError] = useState("");
   const [analyticsError, setAnalyticsError] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [analytics, setAnalytics] = useState<LinkAnalyticsSummary | null>(null);
+  const [copyStatus, setCopyStatus] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setStatusMessage("");
+    setCopyStatus("");
 
     const urlError = validateUrl(longUrl);
     if (urlError) {
@@ -78,6 +81,7 @@ export default function App() {
 
       setShortUrl(result.shortUrl);
       setShortCode(result.shortCode);
+      setAnalyticsCode(result.shortCode);
       setStatusMessage(result.created ? "New short link created." : "That URL already had a short link.");
       setLongUrl("");
       setAlias("");
@@ -91,12 +95,35 @@ export default function App() {
     }
   }
 
+  async function handleCopyShortUrl() {
+    if (!shortUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shortUrl);
+      setCopyStatus("Copied to clipboard.");
+    } catch {
+      setCopyStatus("Copy failed. You can still select and copy the link manually.");
+    }
+  }
+
+  function handleUseGeneratedCode() {
+    if (!shortCode) {
+      return;
+    }
+
+    setAnalyticsCode(shortCode);
+    setAnalyticsError("");
+    setAnalytics(null);
+  }
+
   async function handleAnalyticsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAnalyticsError("");
     setAnalytics(null);
 
-    const code = shortCode.trim();
+    const code = analyticsCode.trim();
 
     if (!code) {
       setAnalyticsError("Enter a short code to view analytics.");
@@ -119,139 +146,165 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">URL Shortner</p>
-          <h1>Short links, without the clutter.</h1>
-          <p className="lead">
-            Paste a long URL, optionally add a custom alias, and get back a clean short link you can share
-            immediately.
-          </p>
-          <div className="feature-strip" aria-label="Key features">
-            <span>Validates URLs</span>
-            <span>Supports aliases</span>
-            <span>Returns reusable short links</span>
-          </div>
+      <section className="shell-grid">
+        <div className="mini-banner" aria-label="Shortener summary">
+          <span className="mini-dot" />
+          <span>Shorten, share, and track in one place.</span>
         </div>
 
-        <form className="card form-card" onSubmit={handleSubmit}>
-          <p className="form-intro">
-            Shorten a link and immediately test the redirect by opening the generated URL.
-          </p>
-
-          <label className="field">
-            <span>Long URL</span>
-            <input
-              type="url"
-              placeholder="https://example.com/very/long/path"
-              value={longUrl}
-              onChange={(event) => setLongUrl(event.target.value)}
-              autoComplete="off"
-              required
-            />
-          </label>
-
-          <label className="field">
-            <span>Custom alias <span className="muted">(optional)</span></span>
-            <input
-              type="text"
-              placeholder="launch-day"
-              value={alias}
-              onChange={(event) => setAlias(event.target.value)}
-              autoComplete="off"
-            />
-          </label>
-
-          <div className="actions">
-            <button type="submit" disabled={loading}>
-              {loading ? "Shortening..." : "Create short link"}
-            </button>
-          </div>
-
-          {error ? (
-            <div className="message message-error" role="alert">
-              {error}
+        <div className="stack">
+          <form className="card form-card" onSubmit={handleSubmit}>
+            <div className="card-heading">
+              <div>
+                <h2>Turn a long URL into a clean short code.</h2>
+              </div>
+              <p className="card-copy">We validate on both the client and server so bad input gets caught early.</p>
             </div>
-          ) : null}
 
-          {statusMessage ? (
-            <div className="message message-success" role="status">
-              {statusMessage}
-            </div>
-          ) : null}
-
-          {shortUrl ? (
-            <div className="result">
-              <span className="result-label">Your short URL</span>
-              <a className="result-link" href={shortUrl} target="_blank" rel="noreferrer">
-                {shortUrl}
-              </a>
-              <p className="result-note">
-                Open the link to confirm the redirect is working end to end.
-              </p>
-            </div>
-          ) : null}
-        </form>
-
-        <section className="card analytics-card">
-          <div className="analytics-heading">
-            <div>
-              <p className="eyebrow">Link Analytics</p>
-              <h2>View the usage summary for a short code.</h2>
-            </div>
-            <p className="analytics-copy">
-              This uses the analytics data already captured by the redirect flow.
-            </p>
-          </div>
-
-          <form className="analytics-form" onSubmit={handleAnalyticsSubmit}>
             <label className="field">
-              <span>Short code</span>
+              <span>Long URL</span>
+              <input
+                type="url"
+                placeholder="https://example.com/very/long/path"
+                value={longUrl}
+                onChange={(event) => setLongUrl(event.target.value)}
+                autoComplete="off"
+                required
+              />
+            </label>
+
+            <label className="field">
+              <span>
+                Custom alias <span className="muted">(optional)</span>
+              </span>
               <input
                 type="text"
-                placeholder="abc12345"
-                value={shortCode}
-                onChange={(event) => setShortCode(event.target.value)}
+                placeholder="launch-day"
+                value={alias}
+                onChange={(event) => setAlias(event.target.value)}
                 autoComplete="off"
               />
             </label>
 
             <div className="actions">
-              <button type="submit" disabled={analyticsLoading}>
-                {analyticsLoading ? "Loading..." : "View analytics"}
+              <button type="submit" disabled={loading}>
+                {loading ? "Shortening..." : "Create short link"}
               </button>
             </div>
+
+            {error ? (
+              <div className="message message-error" role="alert">
+                {error}
+              </div>
+            ) : null}
+
+            {statusMessage ? (
+              <div className="message message-success" role="status">
+                {statusMessage}
+              </div>
+            ) : null}
           </form>
 
-          {analyticsError ? (
-            <div className="message message-error" role="alert">
-              {analyticsError}
-            </div>
-          ) : null}
+          {shortUrl ? (
+            <section className="card result-card">
+              <div className="card-heading compact">
+                <div>
+                  <h2>Short link ready to share.</h2>
+                </div>
+                <span className="result-chip">{shortCode || "generated"}</span>
+              </div>
 
-          {analytics ? (
-            <div className="analytics-grid">
-              <div className="analytics-tile">
-                <span className="result-label">Short code</span>
-                <strong>{analytics.shortCode}</strong>
+              <div className="result">
+                <span className="result-label">Short URL</span>
+                <a className="result-link" href={shortUrl} target="_blank" rel="noreferrer">
+                  {shortUrl}
+                </a>
+                <p className="result-note">
+                  Open the link to confirm the redirect works, or copy it to share elsewhere.
+                </p>
               </div>
-              <div className="analytics-tile">
-                <span className="result-label">Click count</span>
-                <strong>{analytics.clickCount}</strong>
-              </div>
-              <div className="analytics-tile">
-                <span className="result-label">Last accessed</span>
-                <strong>{analytics.lastAccessedAt ? new Date(analytics.lastAccessedAt).toLocaleString() : "Never"}</strong>
-              </div>
-              <div className="analytics-tile analytics-wide">
-                <span className="result-label">Original URL</span>
-                <a href={analytics.originalUrl} target="_blank" rel="noreferrer" className="result-link">
-                  {analytics.originalUrl}
+
+              {copyStatus ? (
+                <div className="message message-success subtle" role="status">
+                  {copyStatus}
+                </div>
+              ) : null}
+
+              <div className="action-row">
+                <button type="button" className="secondary-button" onClick={handleCopyShortUrl}>
+                  Copy link
+                </button>
+                <a className="secondary-button anchor-button" href={shortUrl} target="_blank" rel="noreferrer">
+                  Open link
                 </a>
               </div>
-            </div>
+            </section>
           ) : null}
-        </section>
+
+          <section className="card analytics-card">
+            <div className="analytics-heading">
+              <div>
+                <h2>Check how often a link has been used.</h2>
+              </div>
+              <p className="analytics-copy">
+                This shows the click summary already collected by the redirect flow.
+              </p>
+            </div>
+
+            <form className="analytics-form" onSubmit={handleAnalyticsSubmit}>
+              <label className="field">
+                <span>Short code</span>
+                <input
+                  type="text"
+                  placeholder="abc12345"
+                  value={analyticsCode}
+                  onChange={(event) => setAnalyticsCode(event.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+
+              <div className="action-row">
+                <button type="submit" disabled={analyticsLoading}>
+                  {analyticsLoading ? "Loading..." : "View analytics"}
+                </button>
+                {shortCode ? (
+                  <button type="button" className="secondary-button" onClick={handleUseGeneratedCode}>
+                    Use last result
+                  </button>
+                ) : null}
+              </div>
+            </form>
+
+            {analyticsError ? (
+              <div className="message message-error" role="alert">
+                {analyticsError}
+              </div>
+            ) : null}
+
+            {analytics ? (
+              <div className="analytics-grid">
+                <div className="analytics-tile">
+                  <span className="result-label">Short code</span>
+                  <strong>{analytics.shortCode}</strong>
+                </div>
+                <div className="analytics-tile">
+                  <span className="result-label">Click count</span>
+                  <strong>{analytics.clickCount}</strong>
+                </div>
+                <div className="analytics-tile">
+                  <span className="result-label">Last accessed</span>
+                  <strong>{analytics.lastAccessedAt ? new Date(analytics.lastAccessedAt).toLocaleString() : "Never"}</strong>
+                </div>
+                <div className="analytics-tile analytics-wide">
+                  <span className="result-label">Original URL</span>
+                  <a href={analytics.originalUrl} target="_blank" rel="noreferrer" className="result-link">
+                    {analytics.originalUrl}
+                  </a>
+                </div>
+              </div>
+            ) : null}
+          </section>
+        </div>
       </section>
     </main>
   );
