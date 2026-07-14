@@ -3,6 +3,40 @@ import { shortenUrl } from "./api.js";
 
 const DEFAULT_API_BASE_URL = "http://localhost:4000";
 
+function validateUrl(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "Enter a URL to shorten.";
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "Use an http or https URL.";
+    }
+
+    return null;
+  } catch {
+    return "Enter a valid URL, like https://example.com.";
+  }
+}
+
+function validateAlias(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!/^[A-Za-z0-9_-]{3,64}$/.test(trimmed)) {
+    return "Alias should be 3-64 characters and use letters, numbers, underscores, or dashes.";
+  }
+
+  return null;
+}
+
 export default function App() {
   const [longUrl, setLongUrl] = useState("");
   const [alias, setAlias] = useState("");
@@ -15,6 +49,19 @@ export default function App() {
     event.preventDefault();
     setError("");
     setStatusMessage("");
+
+    const urlError = validateUrl(longUrl);
+    if (urlError) {
+      setError(urlError);
+      return;
+    }
+
+    const aliasError = validateAlias(alias);
+    if (aliasError) {
+      setError(aliasError);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -48,9 +95,18 @@ export default function App() {
             Paste a long URL, optionally add a custom alias, and get back a clean short link you can share
             immediately.
           </p>
+          <div className="feature-strip" aria-label="Key features">
+            <span>Validates URLs</span>
+            <span>Supports aliases</span>
+            <span>Returns reusable short links</span>
+          </div>
         </div>
 
         <form className="card form-card" onSubmit={handleSubmit}>
+          <p className="form-intro">
+            Shorten a link and immediately test the redirect by opening the generated URL.
+          </p>
+
           <label className="field">
             <span>Long URL</span>
             <input
@@ -98,6 +154,9 @@ export default function App() {
               <a className="result-link" href={shortUrl} target="_blank" rel="noreferrer">
                 {shortUrl}
               </a>
+              <p className="result-note">
+                Open the link to confirm the redirect is working end to end.
+              </p>
             </div>
           ) : null}
         </form>

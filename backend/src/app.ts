@@ -8,7 +8,17 @@ import { redirectRouter } from "./routes/redirect.js";
 
 export const app = express();
 
-app.use(cors());
+const corsOrigin = process.env.CORS_ORIGIN;
+
+app.use(
+  cors(
+    corsOrigin
+      ? {
+          origin: corsOrigin.split(",").map((value) => value.trim()).filter(Boolean),
+        }
+      : undefined
+  )
+);
 app.use(express.json());
 app.use(requestLogger);
 
