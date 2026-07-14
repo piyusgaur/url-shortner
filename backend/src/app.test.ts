@@ -3,6 +3,7 @@ import { app } from "./app.js";
 import { ApiError } from "./errors/ApiError.js";
 import { shortenUrl } from "./services/urlShortener.js";
 import { resolveShortCode } from "./services/urlRedirect.js";
+import { getLinkAnalytics } from "./services/linkAnalytics.js";
 
 jest.mock("./services/urlShortener.js", () => ({
   shortenUrl: jest.fn(),
@@ -12,13 +13,19 @@ jest.mock("./services/urlRedirect.js", () => ({
   resolveShortCode: jest.fn(),
 }));
 
+jest.mock("./services/linkAnalytics.js", () => ({
+  getLinkAnalytics: jest.fn(),
+}));
+
 const mockShortenUrl = shortenUrl as jest.MockedFunction<typeof shortenUrl>;
 const mockResolveShortCode = resolveShortCode as jest.MockedFunction<typeof resolveShortCode>;
+const mockGetLinkAnalytics = getLinkAnalytics as jest.MockedFunction<typeof getLinkAnalytics>;
 
 describe("app routes", () => {
   beforeEach(() => {
     mockShortenUrl.mockReset();
     mockResolveShortCode.mockReset();
+    mockGetLinkAnalytics.mockReset();
   });
 
   it("returns health status", async () => {
@@ -78,6 +85,36 @@ describe("app routes", () => {
     mockResolveShortCode.mockRejectedValue(new ApiError(404, "Short code not found"));
 
     const response = await request(app).get("/missing-code");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: "Short code not found" });
+  });
+
+  it("returns analytics for a known short code", async () => {
+    mockGetLinkAnalytics.mockResolvedValue({
+      originalUrl: "https://example.com/",
+      shortCode: "abc12345",
+      clickCount: 9,
+      lastAccessedAt: new Date("2026-07-14T14:00:00.000Z"),
+      createdAt: new Date("2026-07-14T13:00:00.000Z"),
+      updatedAt: new Date("2026-07-14T14:00:00.000Z"),
+    });
+
+    const response = await request(app).get("/analytics/abc12345");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      originalUrl: "https://example.com/",
+      shortCode: "abc12345",
+      clickCount: 9,
+    });
+    expect(mockGetLinkAnalytics).toHaveBeenCalledWith("abc12345");
+  });
+
+  it("returns 404 for unknown analytics codes", async () => {
+    mockGetLinkAnalytics.mockRejectedValue(new ApiError(404, "Short code not found"));
+
+    const response = await request(app).get("/analytics/missing-code");
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Short code not found" });

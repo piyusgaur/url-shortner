@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { shortenUrl } from "./api.js";
+import { fetchLinkAnalytics, type LinkAnalyticsSummary } from "./analytics.js";
 
 const DEFAULT_API_BASE_URL = "http://localhost:4000";
 
@@ -41,9 +42,13 @@ export default function App() {
   const [longUrl, setLongUrl] = useState("");
   const [alias, setAlias] = useState("");
   const [shortUrl, setShortUrl] = useState("");
+  const [shortCode, setShortCode] = useState("");
   const [error, setError] = useState("");
+  const [analyticsError, setAnalyticsError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [analytics, setAnalytics] = useState<LinkAnalyticsSummary | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,6 +77,7 @@ export default function App() {
       });
 
       setShortUrl(result.shortUrl);
+      setShortCode(result.shortCode);
       setStatusMessage(result.created ? "New short link created." : "That URL already had a short link.");
       setLongUrl("");
       setAlias("");
@@ -82,6 +88,32 @@ export default function App() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAnalyticsSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAnalyticsError("");
+    setAnalytics(null);
+
+    const code = shortCode.trim();
+
+    if (!code) {
+      setAnalyticsError("Enter a short code to view analytics.");
+      return;
+    }
+
+    setAnalyticsLoading(true);
+
+    try {
+      const result = await fetchLinkAnalytics(import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL, code);
+      setAnalytics(result);
+    } catch (submitError) {
+      setAnalyticsError(
+        submitError instanceof Error ? submitError.message : "Something went wrong while loading analytics."
+      );
+    } finally {
+      setAnalyticsLoading(false);
     }
   }
 
@@ -160,6 +192,66 @@ export default function App() {
             </div>
           ) : null}
         </form>
+
+        <section className="card analytics-card">
+          <div className="analytics-heading">
+            <div>
+              <p className="eyebrow">Link Analytics</p>
+              <h2>View the usage summary for a short code.</h2>
+            </div>
+            <p className="analytics-copy">
+              This uses the analytics data already captured by the redirect flow.
+            </p>
+          </div>
+
+          <form className="analytics-form" onSubmit={handleAnalyticsSubmit}>
+            <label className="field">
+              <span>Short code</span>
+              <input
+                type="text"
+                placeholder="abc12345"
+                value={shortCode}
+                onChange={(event) => setShortCode(event.target.value)}
+                autoComplete="off"
+              />
+            </label>
+
+            <div className="actions">
+              <button type="submit" disabled={analyticsLoading}>
+                {analyticsLoading ? "Loading..." : "View analytics"}
+              </button>
+            </div>
+          </form>
+
+          {analyticsError ? (
+            <div className="message message-error" role="alert">
+              {analyticsError}
+            </div>
+          ) : null}
+
+          {analytics ? (
+            <div className="analytics-grid">
+              <div className="analytics-tile">
+                <span className="result-label">Short code</span>
+                <strong>{analytics.shortCode}</strong>
+              </div>
+              <div className="analytics-tile">
+                <span className="result-label">Click count</span>
+                <strong>{analytics.clickCount}</strong>
+              </div>
+              <div className="analytics-tile">
+                <span className="result-label">Last accessed</span>
+                <strong>{analytics.lastAccessedAt ? new Date(analytics.lastAccessedAt).toLocaleString() : "Never"}</strong>
+              </div>
+              <div className="analytics-tile analytics-wide">
+                <span className="result-label">Original URL</span>
+                <a href={analytics.originalUrl} target="_blank" rel="noreferrer" className="result-link">
+                  {analytics.originalUrl}
+                </a>
+              </div>
+            </div>
+          ) : null}
+        </section>
       </section>
     </main>
   );
